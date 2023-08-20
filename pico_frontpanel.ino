@@ -148,13 +148,12 @@ static bool timer_active=false;
 // ---- Core 1 code ---- I2C interface
 //
 void set_led(int led,int state) {
-  gpio_put(led, state);
   switch(led) {
-    case LED1:
-      led1=state;
+    case 0:
+      gpio_put(LED1,state);
       break;
-    case LED2:
-      led2=state;
+    case 1:
+      gpio_put(LED2,state);
       break;
   }
 }
