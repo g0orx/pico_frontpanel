@@ -139,7 +139,7 @@ static uint8_t sw;
 static uint8_t led;
 static uint8_t led_state;
 
-static unsigned long debounce_delay = 100L;
+static unsigned long debounce_delay = 200L;
 static unsigned long debounce_millis;
 static struct repeating_timer timer;
 static bool timer_active=false;
