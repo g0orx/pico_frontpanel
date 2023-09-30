@@ -139,10 +139,11 @@ static uint8_t sw;
 static uint8_t led;
 static uint8_t led_state;
 
-static unsigned long debounce_delay = 200L;
+static unsigned long debounce_delay = 50L; // ms
 static unsigned long debounce_millis;
 static struct repeating_timer timer;
 static bool timer_active=false;
+static int timer_count;
 
 //
 // ---- Core 1 code ---- I2C interface
@@ -424,6 +425,11 @@ bool repeating_timer_callback(struct repeating_timer *t) {
   int v=(int)t->user_data;
   enc_val[2]=enc_val[2]+v;
   trigger_enc_interrupt(2);
+  ++timer_count;
+  if(timer_count==5) {
+    cancel_repeating_timer(&timer);
+    add_repeating_timer_ms(100, repeating_timer_callback, (void *)v, &timer);
+  }
   return true;
 }
 
@@ -489,7 +495,7 @@ void irq_callback(uint gpio, uint32_t events) {
         X = TS.readFingerX(0);
         Y = TS.readFingerY(0);
         touched = true;
-        Debug("Touched: "+String(X)+":"+String(Y));
+        
       } else {
         released = true;
       }
@@ -498,6 +504,7 @@ void irq_callback(uint gpio, uint32_t events) {
         last_status=touch_status;
         lastX=X;
         lastY=Y;
+        Debug("Touched: "+String(X)+":"+String(Y));
         trigger_touch_interrupt();
       }
       break;
@@ -550,6 +557,7 @@ void irq_callback(uint gpio, uint32_t events) {
     case ENC1_SW:
     case ENC2_SW:
     case ENC3_SW:
+      debounce_delay = 200L;
       if(millis()>=debounce_millis) {
         enc_sw[encoder] = gpio_state;
         trigger_sw_interrupt(encoder);
@@ -560,6 +568,7 @@ void irq_callback(uint gpio, uint32_t events) {
     // process MIC Down
     case MIC_DOWN:
       // simulate Center Tune encoder
+      debounce_delay = 50L;
       if(millis()>=debounce_millis) {
         if(gpio_state==0) {
           enc_val[2]--;
@@ -569,6 +578,7 @@ void irq_callback(uint gpio, uint32_t events) {
             timer_active=false;
           }
           add_repeating_timer_ms(250, repeating_timer_callback, (void *)-1, &timer);
+          timer_count=0;
           timer_active=true;
         } else if(gpio_state==1) {
           cancel_repeating_timer(&timer);
@@ -580,6 +590,7 @@ void irq_callback(uint gpio, uint32_t events) {
     // process Mic Up
     case MIC_UP:
       // simulate Center Tune encoder
+      debounce_delay = 50L;
       if(millis()>=debounce_millis) {
         if(gpio_state==0) {
           enc_val[2]++;
@@ -589,6 +600,7 @@ void irq_callback(uint gpio, uint32_t events) {
             timer_active=false;
           }
           add_repeating_timer_ms(250, repeating_timer_callback, (void *)1, &timer);
+          timer_count=0;
           timer_active=true;
         } else if(gpio_state==1) {
           cancel_repeating_timer(&timer);
@@ -620,11 +632,11 @@ void setup() {
   // setup LEDs
   gpio_init(LED1);
   gpio_set_dir(LED1, GPIO_OUT);
-  set_led(LED1, LOW);
+  set_led(0, HIGH);
 
   gpio_init(LED2);
   gpio_set_dir(LED2, GPIO_OUT);
-  set_led(LED2, LOW);
+  set_led(1, HIGH);
 
   // setup encoder pins
   gpio_init(ENC0_A);
@@ -741,10 +753,13 @@ void setup() {
   }
 
   // initialize the switch debounce
-  debounce_millis = millis()+debounce_delay;
+  debounce_millis = millis();
 
   // start the thread to manage the i2c interface as a peripheral (slave)
   multicore_launch_core1(i2c_slave_thread);
+
+  set_led(0, LOW);
+  set_led(1, LOW);
 }
 
 void loop() {
