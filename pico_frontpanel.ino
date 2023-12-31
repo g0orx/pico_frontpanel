@@ -11,6 +11,15 @@
  *
 */
 
+// Note that this uses modified version of the GSL1680 library and the FT5206 library
+// which can be downloaded from my github:
+//
+//  http://github/com/g0orx/GSL1680
+//  http://github/com/g0orx/FT5206
+//
+// They have both been modified to be able to pass the Wire interface to use in the begin method.
+//
+
 #include "stdio.h"
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
@@ -34,8 +43,8 @@
 // GSL1680 on BuyDisplay 5" screen
 // FT5206 on BuyDisplay 7" screen 
 
-//#define GSL1680_TS
-#define FT5206_TS
+#define GSL1680_TS
+//#define FT5206_TS
 
 #include <Wire.h>
 #ifdef GSL1680_TS
