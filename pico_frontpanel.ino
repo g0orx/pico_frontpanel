@@ -30,7 +30,7 @@
 #include "i2c_fifo.h"
 #include "i2c_slave.h"
 
-
+// Debug message to serial port
 //#define DEBUG_MESSAGES
 
 #ifdef DEBUG_MESSAGES
@@ -43,8 +43,8 @@
 // GSL1680 on BuyDisplay 5" screen
 // FT5206 on BuyDisplay 7" screen 
 
-#define GSL1680_TS
-//#define FT5206_TS
+//#define GSL1680_TS
+#define FT5206_TS
 
 #include <Wire.h>
 #ifdef GSL1680_TS
@@ -58,6 +58,7 @@
 #define TOUCH_SDA 26
 #define TOUCH_WAKE 19
 #define TOUCH_INTRPT 18
+
 #ifdef GSL1680_TS
 #define TS_I2C_ADDR 0x40
 GSL1680 TS = GSL1680(false, false);  // disable error and info messages
@@ -65,6 +66,7 @@ GSL1680 TS = GSL1680(false, false);  // disable error and info messages
 #ifdef FT5206_TS
 #define TS_I2C_ADDR 0x38
 #include <FT5206.h>
+static int current_touches;
 uint8_t registers[FT5206_REGISTERS];
 uint16_t new_coordinates[5][2]; // max 5 fingers
 FT5206 TS=FT5206(TOUCH_INTRPT);
@@ -532,18 +534,18 @@ void irq_callback(uint gpio, uint32_t events) {
         released = true;
       }
 #endif
-#ifdef FT5206
-      if(TS.touched()) {
+#ifdef FT5206_TS
+      //if(TS.touched()) {
         TS.getTSregisters(registers);
         current_touches = TS.getTScoordinates(new_coordinates, registers);
         if (current_touches > 0) {
           X = new_coordinates[0][0]; // only uses first
-          X = new_coordinates[0][1];
+          Y = new_coordinates[0][1];
           touched = true;
         } else {
           touched = false;
         }
-      }
+      //}
 #endif
       touch_status = (touched<<1)|released;
       if(touch_status!=last_status || X!=lastX || Y!=lastY) {
@@ -781,6 +783,7 @@ void setup() {
     if(res!=0) {
       Debug("Did not find TS on Wire1@"+String(TS_I2C_ADDR,HEX)+": result="+String(res,HEX));
       delay(250);
+      tries++;
     } else {
       foundTS=true;
       Debug("Found TS Wire1 @"+String(TS_I2C_ADDR,HEX));
@@ -795,7 +798,7 @@ void setup() {
     TS.begin(TOUCH_WAKE, TOUCH_INTRPT, &Wire1);
 #endif
 #ifdef FT5206_TS
-    TS.begin(SAFE, &Wire1);
+    TS.begin(EXTRLN, &Wire1);
 #endif
     gpio_init(TOUCH_INTRPT);
     gpio_set_dir(TOUCH_INTRPT, GPIO_IN);
