@@ -543,7 +543,7 @@ void irq_callback(uint gpio, uint32_t events) {
           Y = new_coordinates[0][1];
           touched = true;
         } else {
-          touched = false;
+          released = true;
         }
       //}
 #endif
